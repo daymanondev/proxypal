@@ -11,6 +11,7 @@ import {
 	getCodexApiKeys,
 	getGeminiApiKeys,
 	getOpenAICompatibleProviders,
+	reloadConfig,
 	setClaudeApiKeys,
 	setCodexApiKeys,
 	setGeminiApiKeys,
@@ -333,7 +334,7 @@ export function ApiKeysPage() {
 		setShowModelManager(true);
 	};
 
-	const handleAddModel = () => {
+	const handleAddModel = async () => {
 		const model = newModelInput().trim();
 		if (!model) return;
 
@@ -356,8 +357,18 @@ export function ApiKeysPage() {
 			return p;
 		});
 
-		setOpenaiProviders(updated);
-		setNewModelInput("");
+		setLoading(true);
+		try {
+			await setOpenAICompatibleProviders(updated);
+			setOpenaiProviders(updated);
+			setNewModelInput("");
+			// Reload Tauri config so Settings shows updated providers
+			await reloadConfig();
+		} catch (error) {
+			toastStore.error("Failed to add model", String(error));
+		} finally {
+			setLoading(false);
+		}
 	};
 
 	const handleRemoveModel = async (modelIndex: number) => {
@@ -379,6 +390,8 @@ export function ApiKeysPage() {
 			await setOpenAICompatibleProviders(updated);
 			setOpenaiProviders(updated);
 			toastStore.success("Model removed");
+			// Reload Tauri config so Settings shows updated providers
+			await reloadConfig();
 		} catch (error) {
 			toastStore.error("Failed to remove model", String(error));
 		} finally {
@@ -396,6 +409,8 @@ export function ApiKeysPage() {
 			setShowModelManager(false);
 			setManagingProviderIndex(null);
 			toastStore.success("Models saved");
+			// Reload Tauri config so Settings shows updated providers
+			await reloadConfig();
 		} catch (error) {
 			toastStore.error("Failed to save models", String(error));
 		} finally {
